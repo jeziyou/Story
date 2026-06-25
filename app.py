@@ -1,9 +1,6 @@
 import streamlit as st
-import requests
 from PIL import Image
-import io
-import urllib.parse
-import time
+import os
 
 st.set_page_config(
     page_title="儿童故事集 | Children's Story Collection",
@@ -12,20 +9,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-def get_text_to_image_url(prompt, image_size="landscape_4_3"):
-    encoded_prompt = urllib.parse.quote(prompt)
-    return f"https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt={encoded_prompt}&image_size={image_size}"
-
-@st.cache_data(show_spinner=False)
-def generate_image(prompt, image_size="landscape_4_3"):
-    url = get_text_to_image_url(prompt, image_size)
-    try:
-        response = requests.get(url, timeout=60)
-        if response.status_code == 200:
-            return Image.open(io.BytesIO(response.content))
-    except Exception as e:
-        st.warning(f"图片生成失败，使用默认插图: {e}")
-    return None
+IMAGE_DIR = "images"
 
 stories = [
     {
@@ -34,8 +18,7 @@ stories = [
         "title_en": "The Little Star Who Found Friends",
         "reading_time_cn": "约7分钟",
         "reading_time_en": "About 7 minutes",
-        "cover_prompt_cn": "Cute cartoon little star shining in night sky with big friendly eyes, children's book illustration style, soft warm colors, dreamy atmosphere",
-        "cover_prompt_en": "Cute cartoon little star shining in night sky with big friendly eyes, children's book illustration style, soft warm colors, dreamy atmosphere",
+        "cover_image": "little_star_cover.png",
         "pages": [
             {
                 "text_cn": """在很远很远的天上，住着一颗小小的星星，名字叫闪闪。
@@ -52,8 +35,7 @@ Twinkle was the smallest star in the night sky. Every evening, when Mr. Sun went
 But Twinkle was a little sad. Because she was so small, all the other stars were brighter and bigger than her, and she felt like nobody noticed her.
 
 "If only I could have a friend," Twinkle said with a sigh.""",
-                "image_prompt_cn": "Lonely little cartoon star with sad expression looking at other bigger brighter stars in night sky, children's picture book style, soft purple and blue night sky, gentle moon in background",
-                "image_prompt_en": "Lonely little cartoon star with sad expression looking at other bigger brighter stars in night sky, children's picture book style, soft purple and blue night sky, gentle moon in background"
+                "image": "little_star_page1.png"
             },
             {
                 "text_cn": """这天晚上，闪闪决定要去找朋友。她先去找月亮阿姨。
@@ -70,8 +52,7 @@ But Twinkle was a little sad. Because she was so small, all the other stars were
 Aunt Moon smiled gently, "Little Twinkle, of course I'll be your friend! But I have to light up the whole world every night, so I might not be able to play with you all the time. Why don't you look down below? There are many lovely little friends on the earth!"
 
 Twinkle's eyes lit up when she heard this. She had never looked closely at the earth below before!""",
-                "image_prompt_cn": "Friendly cartoon moon with gentle smile talking to tiny star, beautiful night sky with soft clouds, warm glow, children's book illustration, whimsical style",
-                "image_prompt_en": "Friendly cartoon moon with gentle smile talking to tiny star, beautiful night sky with soft clouds, warm glow, children's book illustration, whimsical style"
+                "image": "little_star_page2.png"
             },
             {
                 "text_cn": """闪闪低下头，往大地上看去。
@@ -96,8 +77,7 @@ Twinkle looked and looked, when suddenly she saw a dark forest. Deep in the fore
 The firefly looked up, teary-eyed, and said, "I... my light is too weak, I can't find my way home..."
 
 Twinkle thought for a moment and said, "Don't be afraid, I'll help you!" Even though Twinkle was small, she tried her best to shine her brightest light, lighting the path ahead for the firefly.""",
-                "image_prompt_cn": "Tiny star shining brightly down on a cute little firefly in dark forest, path illuminated by warm starlight, magical forest scene at night, children's illustration style",
-                "image_prompt_en": "Tiny star shining brightly down on a cute little firefly in dark forest, path illuminated by warm starlight, magical forest scene at night, children's illustration style"
+                "image": "little_star_page3.png"
             },
             {
                 "text_cn": """萤火虫顺着闪闪的光，终于找到了家！萤火虫的爸爸妈妈正在门口焦急地等着呢。
@@ -122,8 +102,7 @@ Twinkle continued flying forward. She flew over a small yard and saw a little gi
 The little girl looked up, saw Twinkle, and said in surprise, "Wow, what a cute little star! Are you blinking at me?"
 
 Twinkle quickly blinked her eyes, casting a gentle glow.""",
-                "image_prompt_cn": "Little girl by bedroom window painting and looking up at smiling star, cozy bedroom with warm light, firefly nearby, children's picture book art style, heartwarming scene",
-                "image_prompt_en": "Little girl by bedroom window painting and looking up at smiling star, cozy bedroom with warm light, firefly nearby, children's picture book art style, heartwarming scene"
+                "image": "little_star_page4.png"
             },
             {
                 "text_cn": """小女孩拿出画纸，开始画天上的星星。她画了好多好多星星，其中有一颗最小的星星，画得最亮、最可爱。
@@ -148,8 +127,7 @@ Just then, the sound of whimpering came from afar. It was a lost little bird, tr
 "Don't be afraid, little bird!" Twinkle said. "I'll light the way for you—fly towards the light, and you'll find your mommy bird!"
 
 Twinkle cast a gentle light, and following the light, the little bird finally found its mother bird waiting anxiously in the nest.""",
-                "image_prompt_cn": "Little star shining light on lost baby bird flying towards mother bird in nest, tree branches, night scene with soft glowing light, children's storybook illustration",
-                "image_prompt_en": "Little star shining light on lost baby bird flying towards mother bird in nest, tree branches, night scene with soft glowing light, children's storybook illustration"
+                "image": "little_star_page5.png"
             },
             {
                 "text_cn": """这时候，其他星星们也注意到了闪闪。
@@ -172,8 +150,7 @@ Twinkle cast a gentle light, and following the light, the little bird finally fo
 Aunt Moon also smiled and said, "Every star has its own light—whether big or small, everyone can brighten someone else's way."
 
 Twinkle smiled shyly when she heard this. She looked down below: the firefly was glowing in the forest, the little girl's window still had a warm light on, and the little bird was sleeping sweetly in its nest.""",
-                "image_prompt_cn": "All stars in sky smiling and looking at little star who is glowing proudly, moon smiling too, below can be seen firefly, girl's window light, bird in nest, panoramic night scene, children's art",
-                "image_prompt_en": "All stars in sky smiling and looking at little star who is glowing proudly, moon smiling too, below can be seen firefly, girl's window light, bird in nest, panoramic night scene, children's art"
+                "image": "little_star_page6.png"
             },
             {
                 "text_cn": """从那以后，闪闪每天晚上都开心地挂在天上。
@@ -198,18 +175,24 @@ Twinkle is still the smallest star in the sky, but you know what? Her smile is t
 Goodnight, little star. Goodnight, little friend. May you too, like Twinkle, shine your warm light in your own special way.
 
 ✨ The End ✨""",
-                "image_prompt_cn": "Happy little star shining brightly with big smile, surrounded by friends firefly, bird, little girl waving from window, beautiful starry night sky, warm golden glow, children's book illustration, happy ending",
-                "image_prompt_en": "Happy little star shining brightly with big smile, surrounded by friends firefly, bird, little girl waving from window, beautiful starry night sky, warm golden glow, children's book illustration, happy ending"
+                "image": "little_star_page7.png"
             }
         ]
     }
 ]
 
+@st.cache_data(show_spinner=False)
+def load_local_image(image_filename):
+    image_path = os.path.join(IMAGE_DIR, image_filename)
+    if os.path.exists(image_path):
+        return Image.open(image_path)
+    return None
+
 def main():
     if 'language' not in st.session_state:
         st.session_state.language = 'cn'
     if 'current_page' not in st.session_state:
-        st.session_state.current_page = 0
+        st.session_state.current_page = -1
     if 'current_story' not in st.session_state:
         st.session_state.current_story = 0
     if 'font_size' not in st.session_state:
@@ -241,7 +224,7 @@ def main():
         )
         if selected_story != st.session_state.current_story:
             st.session_state.current_story = selected_story
-            st.session_state.current_page = 0
+            st.session_state.current_page = -1
             st.rerun()
 
         st.divider()
@@ -257,6 +240,8 @@ def main():
     reading_time = story["reading_time_cn"] if lang == 'cn' else story["reading_time_en"]
     total_pages = len(story["pages"])
 
+    is_cover = st.session_state.current_page == -1
+
     st.markdown(
         f"""
         <h1 style='text-align: center; color: #FFD700; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);'>
@@ -271,71 +256,106 @@ def main():
 
     st.divider()
 
-    progress = st.progress((st.session_state.current_page) / (total_pages - 1) if total_pages > 1 else 1.0)
+    if is_cover:
+        progress_value = 0.0
+        page_display = "封面" if lang == 'cn' else "Cover"
+    else:
+        progress_value = (st.session_state.current_page + 1) / total_pages
+        page_display = f"{'第' if lang == 'cn' else 'Page'} {st.session_state.current_page + 1} / {total_pages}"
+
+    progress = st.progress(progress_value)
     page_col1, page_col2, page_col3 = st.columns([1, 3, 1])
     with page_col2:
         st.markdown(
-            f"<p style='text-align: center; color: #666;'>"
-            f"{'第' if lang == 'cn' else 'Page'} {st.session_state.current_page + 1} / {total_pages}"
-            f"</p>",
+            f"<p style='text-align: center; color: #666;'>{page_display}</p>",
             unsafe_allow_html=True
         )
 
-    current_page_data = story["pages"][st.session_state.current_page]
-    text = current_page_data["text_cn"] if lang == 'cn' else current_page_data["text_en"]
-    image_prompt = current_page_data["image_prompt_cn"] if lang == 'cn' else current_page_data["image_prompt_en"]
-
-    with st.spinner("🎨 " + ("正在绘制插图..." if lang == 'cn' else "Drawing illustration...")):
-        image = generate_image(image_prompt)
-
-    if image:
-        st.image(image, use_container_width=True)
+    if is_cover:
+        cover_image = load_local_image(story["cover_image"])
+        if cover_image:
+            st.image(cover_image, use_container_width=True)
+        
+        st.markdown(
+            f"""
+            <div style='
+                background: linear-gradient(135deg, #FFF8E7 0%, #FFE4B5 100%);
+                padding: 40px;
+                border-radius: 20px;
+                margin: 20px 0;
+                text-align: center;
+                color: #4A4A4A;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                border: 2px solid #FFD700;
+            '>
+                <h2 style='color: #FFD700; margin-bottom: 20px;'>{'✨ 欢迎来到故事世界 ✨' if lang == 'cn' else '✨ Welcome to Storyland ✨'}</h2>
+                <p style='font-size: {st.session_state.font_size}px; line-height: 2;'>
+                    {'点击下方的「开始阅读」按钮，开启一段奇妙的冒险旅程吧！' if lang == 'cn' else 'Click the "Start Reading" button below to begin a wonderful adventure!'}
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     else:
-        st.info("🌟 " + ("（插图即将显示）" if lang == 'cn' else "(Illustration will appear here)"))
+        current_page_data = story["pages"][st.session_state.current_page]
+        text = current_page_data["text_cn"] if lang == 'cn' else current_page_data["text_en"]
+        image = load_local_image(current_page_data["image"])
 
-    st.markdown(
-        f"""
-        <div style='
-            background: linear-gradient(135deg, #FFF8E7 0%, #FFE4B5 100%);
-            padding: 30px;
-            border-radius: 20px;
-            margin: 20px 0;
-            font-size: {st.session_state.font_size}px;
-            line-height: 2;
-            color: #4A4A4A;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border: 2px solid #FFD700;
-        '>
-            {text.replace(chr(10), '<br><br>')}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        if image:
+            st.image(image, use_container_width=True)
+
+        st.markdown(
+            f"""
+            <div style='
+                background: linear-gradient(135deg, #FFF8E7 0%, #FFE4B5 100%);
+                padding: 30px;
+                border-radius: 20px;
+                margin: 20px 0;
+                font-size: {st.session_state.font_size}px;
+                line-height: 2;
+                color: #4A4A4A;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                border: 2px solid #FFD700;
+            '>
+                {text.replace(chr(10), '<br><br>')}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     st.divider()
 
     nav_col1, nav_col2, nav_col3 = st.columns([1, 2, 1])
 
     with nav_col1:
-        if st.session_state.current_page > 0:
+        if not is_cover and st.session_state.current_page > 0:
             if st.button("⬅️ " + ("上一页" if lang == 'cn' else "Previous"), use_container_width=True):
                 st.session_state.current_page -= 1
                 st.rerun()
+        elif not is_cover and st.session_state.current_page == 0:
+            if st.button("🏠 " + ("返回封面" if lang == 'cn' else "Back to Cover"), use_container_width=True):
+                st.session_state.current_page = -1
+                st.rerun()
 
     with nav_col3:
-        if st.session_state.current_page < total_pages - 1:
+        if is_cover:
+            if st.button("🚀 " + ("开始阅读" if lang == 'cn' else "Start Reading"), use_container_width=True, type="primary"):
+                st.session_state.current_page = 0
+                st.rerun()
+        elif st.session_state.current_page < total_pages - 1:
             if st.button("➡️ " + ("下一页" if lang == 'cn' else "Next"), use_container_width=True, type="primary"):
                 st.session_state.current_page += 1
                 st.rerun()
         else:
-            if st.button("🔄 " + ("重新开始" if lang == 'cn' else "Read Again"), use_container_width=True):
-                st.session_state.current_page = 0
+            if st.button("🔄 " + ("重新开始" if lang == 'cn' else "Read Again"), use_container_width=True, type="primary"):
+                st.session_state.current_page = -1
                 st.rerun()
 
     with nav_col2:
-        if st.button("🏠 " + ("返回封面" if lang == 'cn' else "Cover Page"), use_container_width=True):
-            st.session_state.current_page = 0
-            st.rerun()
+        if not is_cover:
+            if st.button("📖 " + ("返回封面" if lang == 'cn' else "Cover Page"), use_container_width=True):
+                st.session_state.current_page = -1
+                st.rerun()
 
     st.markdown(
         "<p style='text-align: center; color: #aaa; font-size: 12px; margin-top: 40px;'>"
