@@ -1,5 +1,4 @@
 import streamlit as st
-from PIL import Image
 import os
 
 st.set_page_config(
@@ -181,11 +180,10 @@ Goodnight, little star. Goodnight, little friend. May you too, like Twinkle, shi
     }
 ]
 
-@st.cache_data(show_spinner=False)
-def load_local_image(image_filename):
+def get_image_path(image_filename):
     image_path = os.path.join(IMAGE_DIR, image_filename)
     if os.path.exists(image_path):
-        return Image.open(image_path)
+        return image_path
     return None
 
 def main():
@@ -272,9 +270,9 @@ def main():
         )
 
     if is_cover:
-        cover_image = load_local_image(story["cover_image"])
-        if cover_image:
-            st.image(cover_image, use_container_width=True)
+        cover_path = get_image_path(story["cover_image"])
+        if cover_path:
+            st.image(cover_path, use_container_width=True)
         
         st.markdown(
             f"""
@@ -299,10 +297,10 @@ def main():
     else:
         current_page_data = story["pages"][st.session_state.current_page]
         text = current_page_data["text_cn"] if lang == 'cn' else current_page_data["text_en"]
-        image = load_local_image(current_page_data["image"])
+        img_path = get_image_path(current_page_data["image"])
 
-        if image:
-            st.image(image, use_container_width=True)
+        if img_path:
+            st.image(img_path, use_container_width=True)
 
         st.markdown(
             f"""
