@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import urllib.parse
 
 st.set_page_config(
     page_title="儿童故事集 | Children's Story Collection",
@@ -9,6 +10,11 @@ st.set_page_config(
 )
 
 IMAGE_DIR = "images"
+IMAGE_API = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image"
+
+def get_image_url(prompt, image_size="landscape_4_3"):
+    encoded = urllib.parse.quote(prompt)
+    return f"{IMAGE_API}?prompt={encoded}&image_size={image_size}"
 
 stories = [
     {
@@ -18,6 +24,7 @@ stories = [
         "reading_time_cn": "约7分钟",
         "reading_time_en": "About 7 minutes",
         "cover_image": "little_star_cover.png",
+        "cover_prompt": "Cute cartoon little star character with big friendly eyes smiling in night sky, warm golden glow, children's book illustration style, soft dreamy colors, whimsical",
         "pages": [
             {
                 "text_cn": """在很远很远的天上，住着一颗小小的星星，名字叫闪闪。
@@ -34,7 +41,8 @@ Twinkle was the smallest star in the night sky. Every evening, when Mr. Sun went
 But Twinkle was a little sad. Because she was so small, all the other stars were brighter and bigger than her, and she felt like nobody noticed her.
 
 "If only I could have a friend," Twinkle said with a sigh.""",
-                "image": "little_star_page1.png"
+                "image": "little_star_page1.png",
+                "image_prompt": "Lonely cute cartoon tiny star with sad expression looking up at bigger brighter stars, beautiful purple blue night sky, gentle crescent moon, children's picture book art, soft pastel colors"
             },
             {
                 "text_cn": """这天晚上，闪闪决定要去找朋友。她先去找月亮阿姨。
@@ -51,7 +59,8 @@ But Twinkle was a little sad. Because she was so small, all the other stars were
 Aunt Moon smiled gently, "Little Twinkle, of course I'll be your friend! But I have to light up the whole world every night, so I might not be able to play with you all the time. Why don't you look down below? There are many lovely little friends on the earth!"
 
 Twinkle's eyes lit up when she heard this. She had never looked closely at the earth below before!""",
-                "image": "little_star_page2.png"
+                "image": "little_star_page2.png",
+                "image_prompt": "Friendly smiling crescent moon with kind face talking to tiny glowing star, fluffy white clouds, warm golden light, children's storybook illustration, whimsical cartoon style, night sky background"
             },
             {
                 "text_cn": """闪闪低下头，往大地上看去。
@@ -76,7 +85,8 @@ Twinkle looked and looked, when suddenly she saw a dark forest. Deep in the fore
 The firefly looked up, teary-eyed, and said, "I... my light is too weak, I can't find my way home..."
 
 Twinkle thought for a moment and said, "Don't be afraid, I'll help you!" Even though Twinkle was small, she tried her best to shine her brightest light, lighting the path ahead for the firefly.""",
-                "image": "little_star_page3.png"
+                "image": "little_star_page3.png",
+                "image_prompt": "Tiny star shining bright beam of light down on cute glowing firefly in dark magical forest, trees and mushrooms, warm illumination, children's book illustration, enchanting night scene"
             },
             {
                 "text_cn": """萤火虫顺着闪闪的光，终于找到了家！萤火虫的爸爸妈妈正在门口焦急地等着呢。
@@ -101,7 +111,8 @@ Twinkle continued flying forward. She flew over a small yard and saw a little gi
 The little girl looked up, saw Twinkle, and said in surprise, "Wow, what a cute little star! Are you blinking at me?"
 
 Twinkle quickly blinked her eyes, casting a gentle glow.""",
-                "image": "little_star_page4.png"
+                "image": "little_star_page4.png",
+                "image_prompt": "Sweet little girl by bedroom window painting at easel, looking up and smiling at twinkling star outside, cozy warm bedroom, stuffed animals, firefly near window, heartwarming children's art style"
             },
             {
                 "text_cn": """小女孩拿出画纸，开始画天上的星星。她画了好多好多星星，其中有一颗最小的星星，画得最亮、最可爱。
@@ -126,7 +137,8 @@ Just then, the sound of whimpering came from afar. It was a lost little bird, tr
 "Don't be afraid, little bird!" Twinkle said. "I'll light the way for you—fly towards the light, and you'll find your mommy bird!"
 
 Twinkle cast a gentle light, and following the light, the little bird finally found its mother bird waiting anxiously in the nest.""",
-                "image": "little_star_page5.png"
+                "image": "little_star_page5.png",
+                "image_prompt": "Tiny star shining light path for lost cute baby bird flying to mother bird in nest on tree branch, green leaves, night time, warm glowing light beam, children's storybook illustration, gentle style"
             },
             {
                 "text_cn": """这时候，其他星星们也注意到了闪闪。
@@ -149,7 +161,8 @@ Twinkle cast a gentle light, and following the light, the little bird finally fo
 Aunt Moon also smiled and said, "Every star has its own light—whether big or small, everyone can brighten someone else's way."
 
 Twinkle smiled shyly when she heard this. She looked down below: the firefly was glowing in the forest, the little girl's window still had a warm light on, and the little bird was sleeping sweetly in its nest.""",
-                "image": "little_star_page6.png"
+                "image": "little_star_page6.png",
+                "image_prompt": "All stars in sky including big moon smiling down proudly at little twinkling star, showing firefly in forest, warm window light, bird in nest, panoramic beautiful night, children's book illustration"
             },
             {
                 "text_cn": """从那以后，闪闪每天晚上都开心地挂在天上。
@@ -174,17 +187,34 @@ Twinkle is still the smallest star in the sky, but you know what? Her smile is t
 Goodnight, little star. Goodnight, little friend. May you too, like Twinkle, shine your warm light in your own special way.
 
 ✨ The End ✨""",
-                "image": "little_star_page7.png"
+                "image": "little_star_page7.png",
+                "image_prompt": "Happy glowing little star with big smile surrounded by friends firefly, baby bird with mother, little girl waving from window, beautiful starry sky, warm golden happy ending, children's book illustration, joy"
             }
         ]
     }
 ]
 
-def get_image_path(image_filename):
+def get_image_source(image_filename, image_prompt=None):
     image_path = os.path.join(IMAGE_DIR, image_filename)
-    if os.path.exists(image_path):
-        return image_path
+    if os.path.exists(image_path) and os.path.getsize(image_path) > 50000:
+        return ("local", image_path)
+    if image_prompt:
+        return ("url", get_image_url(image_prompt))
     return None
+
+def display_image(source):
+    if source is None:
+        return
+    src_type, src_value = source
+    if src_type == "local":
+        st.image(src_value, use_container_width=True)
+    else:
+        st.markdown(
+            f'<div style="display: flex; justify-content: center; margin: 20px 0;">'
+            f'<img src="{src_value}" style="width: 100%; max-width: 800px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);" />'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 
 def speak_text(text, lang='zh-CN', rate=1.0):
     text_clean = text.replace('"', '\\"').replace("'", "\\'").replace('\n', ' ')
@@ -354,9 +384,8 @@ def main():
         )
 
     if is_cover:
-        cover_path = get_image_path(story["cover_image"])
-        if cover_path:
-            st.image(cover_path, use_container_width=True)
+        cover_src = get_image_source(story["cover_image"], story.get("cover_prompt"))
+        display_image(cover_src)
         
         st.markdown(
             f"""
@@ -381,10 +410,8 @@ def main():
     else:
         current_page_data = story["pages"][st.session_state.current_page]
         text = current_page_data["text_cn"] if lang == 'cn' else current_page_data["text_en"]
-        img_path = get_image_path(current_page_data["image"])
-
-        if img_path:
-            st.image(img_path, use_container_width=True)
+        img_src = get_image_source(current_page_data["image"], current_page_data.get("image_prompt"))
+        display_image(img_src)
 
         btn_col1, btn_col2, btn_col3 = st.columns([1, 2, 1])
         with btn_col2:
