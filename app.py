@@ -186,6 +186,58 @@ def get_image_path(image_filename):
         return image_path
     return None
 
+def speak_text(text, lang='zh-CN', rate=1.0):
+    text_clean = text.replace('"', '\\"').replace("'", "\\'").replace('\n', ' ')
+    lang_code = 'zh-CN' if lang == 'cn' else 'en-US'
+    html = f"""
+    <script>
+    (function() {{
+        if ('speechSynthesis' in window) {{
+            window.speechSynthesis.cancel();
+            var utterance = new SpeechSynthesisUtterance("{text_clean}");
+            utterance.lang = "{lang_code}";
+            utterance.rate = {rate};
+            utterance.pitch = 1.1;
+            
+            function setVoice() {{
+                var voices = window.speechSynthesis.getVoices();
+                var selectedVoice = null;
+                if ("{lang_code}" === 'zh-CN') {{
+                    selectedVoice = voices.find(v => v.lang.startsWith('zh') || v.lang === 'zh-CN');
+                }} else {{
+                    selectedVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'));
+                    if (!selectedVoice) {{
+                        selectedVoice = voices.find(v => v.lang.startsWith('en'));
+                    }}
+                }}
+                if (selectedVoice) {{
+                    utterance.voice = selectedVoice;
+                }}
+                window.speechSynthesis.speak(utterance);
+            }}
+            
+            var voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {{
+                setVoice();
+            }} else {{
+                window.speechSynthesis.onvoiceschanged = setVoice;
+            }}
+        }}
+    }})();
+    </script>
+    """
+    st.components.v1.html(html, height=0, width=0)
+
+def stop_speech():
+    html = """
+    <script>
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+    </script>
+    """
+    st.components.v1.html(html, height=0, width=0)
+
 def main():
     if 'language' not in st.session_state:
         st.session_state.language = 'cn'
@@ -195,6 +247,14 @@ def main():
         st.session_state.current_story = 0
     if 'font_size' not in st.session_state:
         st.session_state.font_size = 18
+    if 'speech_rate' not in st.session_state:
+        st.session_state.speech_rate = 1.0
+    if 'auto_play' not in st.session_state:
+        st.session_state.auto_play = False
+    if 'last_spoken_page' not in st.session_state:
+        st.session_state.last_spoken_page = None
+    if 'speech_trigger' not in st.session_state:
+        st.session_state.speech_trigger = 0
 
     lang = st.session_state.language
 
@@ -204,10 +264,12 @@ def main():
         with col1:
             if st.button("中文", use_container_width=True, type="primary" if lang == 'cn' else "secondary"):
                 st.session_state.language = 'cn'
+                st.session_state.last_spoken_page = None
                 st.rerun()
         with col2:
             if st.button("English", use_container_width=True, type="primary" if lang == 'en' else "secondary"):
                 st.session_state.language = 'en'
+                st.session_state.last_spoken_page = None
                 st.rerun()
 
         st.divider()
@@ -223,6 +285,8 @@ def main():
         if selected_story != st.session_state.current_story:
             st.session_state.current_story = selected_story
             st.session_state.current_page = -1
+            st.session_state.last_spoken_page = None
+            stop_speech()
             st.rerun()
 
         st.divider()
@@ -231,6 +295,26 @@ def main():
         st.session_state.font_size = st.slider(
             "Aa", 14, 28, st.session_state.font_size,
             label_visibility="collapsed"
+        )
+
+        st.divider()
+
+        st.markdown("### 🔊 " + ("语音朗读" if lang == 'cn' else "Voice Reading"))
+        st.session_state.auto_play = st.toggle(
+            "自动播放" if lang == 'cn' else "Auto-play",
+            value=st.session_state.auto_play,
+            help=("翻页时自动朗读当前页" if lang == 'cn' else "Automatically read when turning pages")
+        )
+        
+        st.session_state.speech_rate = st.slider(
+            "语速" if lang == 'cn' else "Speed",
+            0.5, 1.5, st.session_state.speech_rate, 0.1,
+            format="%.1fx"
+        )
+        
+        st.info(
+            "💡 使用浏览器内置语音引擎，无需网络" if lang == 'cn' 
+            else "💡 Uses browser's built-in voice engine, no internet needed"
         )
 
     story = stories[st.session_state.current_story]
@@ -302,6 +386,21 @@ def main():
         if img_path:
             st.image(img_path, use_container_width=True)
 
+        btn_col1, btn_col2, btn_col3 = st.columns([1, 2, 1])
+        with btn_col2:
+            play_label = "🔊 朗读本页" if lang == 'cn' else "🔊 Read this page"
+            stop_label = "⏹️ 停止" if lang == 'cn' else "⏹️ Stop"
+            
+            col_play, col_stop = st.columns(2)
+            with col_play:
+                if st.button(play_label, use_container_width=True, type="primary"):
+                    st.session_state.speech_trigger += 1
+                    st.session_state.last_spoken_page = (st.session_state.current_story, st.session_state.current_page, lang)
+                    speak_text(text, lang, st.session_state.speech_rate)
+            with col_stop:
+                if st.button(stop_label, use_container_width=True):
+                    stop_speech()
+
         st.markdown(
             f"""
             <div style='
@@ -320,6 +419,12 @@ def main():
             """,
             unsafe_allow_html=True
         )
+        
+        page_key = (st.session_state.current_story, st.session_state.current_page, lang)
+        if st.session_state.auto_play and st.session_state.last_spoken_page != page_key:
+            st.session_state.last_spoken_page = page_key
+            st.session_state.speech_trigger += 1
+            speak_text(text, lang, st.session_state.speech_rate)
 
     st.divider()
 
@@ -328,11 +433,14 @@ def main():
     with nav_col1:
         if not is_cover and st.session_state.current_page > 0:
             if st.button("⬅️ " + ("上一页" if lang == 'cn' else "Previous"), use_container_width=True):
+                stop_speech()
                 st.session_state.current_page -= 1
                 st.rerun()
         elif not is_cover and st.session_state.current_page == 0:
             if st.button("🏠 " + ("返回封面" if lang == 'cn' else "Back to Cover"), use_container_width=True):
+                stop_speech()
                 st.session_state.current_page = -1
+                st.session_state.last_spoken_page = None
                 st.rerun()
 
     with nav_col3:
@@ -342,17 +450,22 @@ def main():
                 st.rerun()
         elif st.session_state.current_page < total_pages - 1:
             if st.button("➡️ " + ("下一页" if lang == 'cn' else "Next"), use_container_width=True, type="primary"):
+                stop_speech()
                 st.session_state.current_page += 1
                 st.rerun()
         else:
             if st.button("🔄 " + ("重新开始" if lang == 'cn' else "Read Again"), use_container_width=True, type="primary"):
+                stop_speech()
                 st.session_state.current_page = -1
+                st.session_state.last_spoken_page = None
                 st.rerun()
 
     with nav_col2:
         if not is_cover:
             if st.button("📖 " + ("返回封面" if lang == 'cn' else "Cover Page"), use_container_width=True):
+                stop_speech()
                 st.session_state.current_page = -1
+                st.session_state.last_spoken_page = None
                 st.rerun()
 
     st.markdown(
