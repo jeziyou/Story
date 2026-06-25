@@ -12,7 +12,7 @@ st.set_page_config(
 IMAGE_DIR = "images"
 IMAGE_API = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image"
 
-def get_image_url(prompt, image_size="landscape_4_3"):
+def get_image_url(prompt, image_size="square"):
     encoded = urllib.parse.quote(prompt)
     return f"{IMAGE_API}?prompt={encoded}&image_size={image_size}"
 
@@ -196,7 +196,7 @@ Goodnight, little star. Goodnight, little friend. May you too, like Twinkle, shi
 
 def get_image_source(image_filename, image_prompt=None):
     image_path = os.path.join(IMAGE_DIR, image_filename)
-    if os.path.exists(image_path) and os.path.getsize(image_path) > 50000:
+    if os.path.exists(image_path):
         return ("local", image_path)
     if image_prompt:
         return ("url", get_image_url(image_prompt))
